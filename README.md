@@ -1,2 +1,0 @@
-# Fatura-Takip
-Fatura Takip
