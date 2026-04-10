@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fatura Takip</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #13161e;
+      --surface2: #1a1e28;
+      --border: #252a38;
+      --accent: #f0c040;
+      --accent2: #4f8fff;
+      --danger: #ff5f5f;
+      --success: #4ecf8a;
+      --warning: #ff9f43;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --elektrik: #f0c040;
+      --dogalgaz: #ff7b54;
+      --su: #4f8fff;
+      --internet: #b47fff;
+      --kira: #4ecf8a;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 80% 10%, rgba(240,192,64,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 10% 80%, rgba(79,143,255,.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 40px 24px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+    .logo {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .logo-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.35rem; font-weight: 800;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .logo p { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+
+    .header-actions { display: flex; gap: 10px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem; font-weight: 500;
+      padding: 10px 18px; border-radius: var(--radius-sm);
+      border: none; cursor: pointer;
+      transition: all .18s ease;
+      display: inline-flex; align-items: center; gap: 7px;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--accent); color: #0d0f14;
+    }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-success { background: var(--success); color: #0d0f14; }
+    .btn-sm { padding: 6px 12px; font-size: .72rem; }
+
+    /* ── LAYOUT ── */
+    main { position: relative; z-index: 1; padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px;
+      position: relative; overflow: hidden;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .stat-card.toplam::before { background: var(--accent); }
+    .stat-card.odendi::before { background: var(--success); }
+    .stat-card.bekliyor::before { background: var(--warning); }
+    .stat-card.kalan::before { background: var(--accent2); }
+
+    .stat-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .stat-value {
+      font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700;
+      margin: 6px 0 4px; letter-spacing: -.02em;
+    }
+    .stat-sub { font-size: .72rem; color: var(--muted); }
+
+    /* ── FILTERS ── */
+    .filters {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .filters label { font-size: .72rem; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+    .filters select, .filters input {
+      font-family: 'DM Mono', monospace; font-size: .78rem;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 8px 12px; outline: none;
+      transition: border-color .18s;
+      cursor: pointer; min-width: 130px;
+    }
+    .filters select:focus, .filters input:focus { border-color: var(--accent); }
+    .filters select option { background: var(--surface2); }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 24px;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px; border-bottom: 1px solid var(--border);
+    }
+    .table-header h2 {
+      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: .68rem; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .08em; font-weight: 400;
+      padding: 12px 20px; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    td {
+      padding: 14px 20px; font-size: .8rem;
+      vertical-align: middle;
+    }
+
+    /* ── KATEGORİ BADGE ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 20px; font-size: .7rem;
+      font-weight: 500; border: 1px solid;
+    }
+    .badge-elektrik  { color: var(--elektrik);  border-color: var(--elektrik);  background: rgba(240,192,64,.08); }
+    .badge-dogalgaz  { color: var(--dogalgaz);  border-color: var(--dogalgaz);  background: rgba(255,123,84,.08); }
+    .badge-su        { color: var(--su);         border-color: var(--su);         background: rgba(79,143,255,.08); }
+    .badge-internet  { color: var(--internet);   border-color: var(--internet);   background: rgba(180,127,255,.08); }
+    .badge-kira      { color: var(--kira);       border-color: var(--kira);       background: rgba(78,207,138,.08); }
+
+    .badge-durum-ok   { color: var(--success); border-color: var(--success); background: rgba(78,207,138,.08); }
+    .badge-durum-wait { color: var(--warning);  border-color: var(--warning);  background: rgba(255,159,67,.08); }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap { display: flex; align-items: center; gap: 8px; }
+    .progress-bar {
+      flex: 1; height: 6px; background: var(--surface2);
+      border-radius: 3px; overflow: hidden; min-width: 80px;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent2), var(--success));
+      transition: width .5s ease;
+    }
+    .progress-text { font-size: .68rem; color: var(--muted); white-space: nowrap; }
+
+    /* ── ACTIONS ── */
+    .action-btns { display: flex; gap: 6px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; width: 480px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
+      animation: modalIn .22s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal h3 {
+      font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: .72rem; color: var(--muted);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; font-family: 'DM Mono', monospace; font-size: .85rem;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 14px; outline: none; transition: border-color .18s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent);
+    }
+    .form-group select option { background: var(--surface2); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+    }
+
+    /* ── PAYMENT MODAL ÖZEL ── */
+    .payment-info {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .payment-info p { font-size: .78rem; color: var(--muted); margin-bottom: 4px; }
+    .payment-info strong { color: var(--text); font-size: .95rem; }
+    .payment-history { margin-top: 16px; }
+    .payment-history h4 { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    .payment-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 1px solid var(--border); margin-bottom: 6px;
+      font-size: .78rem;
+    }
+    .payment-item .amt { color: var(--success); font-weight: 500; }
+    .payment-item .dt  { color: var(--muted); font-size: .68rem; }
+
+    /* ── TOAST ── */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      font-size: .78rem; min-width: 240px;
+      animation: toastIn .2s ease; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .toast.success { border-left-color: var(--success); }
+    .toast.danger   { border-left-color: var(--danger); }
+    @keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+    /* ── EMPTY STATE ── */
+    .empty { text-align: center; padding: 60px; color: var(--muted); }
+    .empty .icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty p { font-size: .85rem; }
+
+    /* ── CONFIG PANEL ── */
+    .config-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 24px;
+    }
+    .config-panel h3 { font-family: 'Syne', sans-serif; font-size: .95rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      header { padding: 20px; }
+      main   { padding: 20px; }
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      table  { font-size: .75rem; }
+      td, thead th { padding: 10px 12px; }
+    }
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .logo h1 { font-size: 1.1rem; }
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 40px; color: var(--muted); font-size: .8rem;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .config-required { display: block; }
+    .app-content { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <h1>Fatura Takip</h1>
+      <p>Ortak Ödeme Yönetim Sistemi</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline btn-sm" onclick="showSettings()">⚙ Ayarlar</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Fatura Ekle</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- SUPABASE AYAR PANELİ -->
+  <div class="config-panel config-required" id="configPanel">
+    <h3>🔧 Supabase Bağlantısı Gerekli</h3>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:16px;">
+      Uygulamayı kullanmak için Supabase proje URL'nizi ve anon key'inizi girin.
+      Bu bilgiler tarayıcınızda saklanır.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Supabase URL</label>
+        <input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co" />
+      </div>
+      <div class="form-group">
+        <label>Anon Key</label>
+        <input type="text" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveConfig()">Bağlan &amp; Devam Et →</button>
+  </div>
+
+  <!-- UYGULAMA İÇERİĞİ -->
+  <div class="app-content" id="appContent">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card toplam">
+        <div class="stat-label">Toplam Fatura</div>
+        <div class="stat-value" id="statToplam">₺0</div>
+        <div class="stat-sub" id="statToplamSay">0 kayıt</div>
+      </div>
+      <div class="stat-card odendi">
+        <div class="stat-label">Ödenen (Ben)</div>
+        <div class="stat-value" id="statOdendi">₺0</div>
+        <div class="stat-sub">Tüm faturalar</div>
+      </div>
+      <div class="stat-card bekliyor">
+        <div class="stat-label">Ortak Payı (Toplam)</div>
+        <div class="stat-value" id="statBekliyor">₺0</div>
+        <div class="stat-sub">Fatura/2 toplamı</div>
+      </div>
+      <div class="stat-card kalan">
+        <div class="stat-label">Ortak'tan Kalan</div>
+        <div class="stat-value" id="statKalan">₺0</div>
+        <div class="stat-sub" id="statKalanSay">Tahsil edilmedi</div>
+      </div>
+    </div>
+
+    <!-- FİLTRELER -->
+    <div class="filters">
+      <label>
+        Ay
+        <select id="filterAy" onchange="loadFaturalar()">
+          <option value="">Tümü</option>
+          <option value="1">Ocak</option><option value="2">Şubat</option>
+          <option value="3">Mart</option><option value="4">Nisan</option>
+          <option value="5">Mayıs</option><option value="6">Haziran</option>
+          <option value="7">Temmuz</option><option value="8">Ağustos</option>
+          <option value="9">Eylül</option><option value="10">Ekim</option>
+          <option value="11">Kasım</option><option value="12">Aralık</option>
+        </select>
+      </label>
+      <label>
+        Yıl
+        <select id="filterYil" onchange="loadFaturalar()">
+          <option value="">Tümü</option>
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </label>
+      <label>
+        Kategori
+        <select id="filterKat" onchange="loadFaturalar()">
+          <option value="">Tümü</option>
+          <option value="elektrik">⚡ Elektrik</option>
+          <option value="dogalgaz">🔥 Doğalgaz</option>
+          <option value="su">💧 Su</option>
+          <option value="internet">🌐 İnternet</option>
+          <option value="kira">🏠 Kira</option>
+        </select>
+      </label>
+      <label>
+        Durum
+        <select id="filterDurum" onchange="loadFaturalar()">
+          <option value="">Tümü</option>
+          <option value="tam">Tam Alındı</option>
+          <option value="bekliyor">Bekliyor</option>
+        </select>
+      </label>
+      <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="margin-top:18px;">✕ Temizle</button>
+    </div>
+
+    <!-- TABLO -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>Faturalar</h2>
+        <span id="rowCount" style="font-size:.72rem;color:var(--muted);"></span>
+      </div>
+      <div id="tableContainer">
+        <div class="loading"><div class="spinner"></div> Yükleniyor...</div>
+      </div>
+    </div>
+
+  </div><!-- /app-content -->
+</main>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- ─── FATURA EKLE/DÜZENLE MODAL ─── -->
+<div class="modal-overlay" id="faturaMo">
+  <div class="modal">
+    <h3 id="faturaMoTitle">Yeni Fatura Ekle</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="fKat">
+          <option value="elektrik">⚡ Elektrik</option>
+          <option value="dogalgaz">🔥 Doğalgaz</option>
+          <option value="su">💧 Su</option>
+          <option value="internet">🌐 İnternet</option>
+          <option value="kira">🏠 Kira</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tutar (₺)</label>
+        <input type="number" id="fTutar" placeholder="0.00" step="0.01" min="0"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ay</label>
+        <select id="fAy">
+          <option value="1">Ocak</option><option value="2">Şubat</option>
+          <option value="3">Mart</option><option value="4">Nisan</option>
+          <option value="5">Mayıs</option><option value="6">Haziran</option>
+          <option value="7">Temmuz</option><option value="8">Ağustos</option>
+          <option value="9">Eylül</option><option value="10">Ekim</option>
+          <option value="11">Kasım</option><option value="12">Aralık</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Yıl</label>
+        <select id="fYil">
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Açıklama (isteğe bağlı)</label>
+      <input type="text" id="fAcik" placeholder="Fatura notu..."/>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="fOdendi" style="width:auto;"/> Ben ödedim (✓)
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('faturaMo')">İptal</button>
+      <button class="btn btn-primary" onclick="saveFatura()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ÖDEME MODAL ─── -->
+<div class="modal-overlay" id="odemeMo">
+  <div class="modal">
+    <h3>💸 Ortak Ödemesi Ekle</h3>
+    <div class="payment-info" id="payInfo"></div>
+    <div class="form-group">
+      <label>Alınan Miktar (₺)</label>
+      <input type="number" id="pMiktar" placeholder="0.00" step="0.01" min="0.01"/>
+    </div>
+    <div class="form-group">
+      <label>Not (isteğe bağlı)</label>
+      <input type="text" id="pNot" placeholder="Ödeme notu..."/>
+    </div>
+    <div class="payment-history" id="payHistory"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('odemeMo')">İptal</button>
+      <button class="btn btn-success" onclick="saveOdeme()">Ödeme Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SİL ONAY MODAL ─── -->
+<div class="modal-overlay" id="silMo">
+  <div class="modal" style="max-width:360px;">
+    <h3>Faturayı Sil</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px;">
+      Bu fatura ve tüm ödeme geçmişi kalıcı olarak silinecek. Emin misin?
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('silMo')">İptal</button>
+      <button class="btn btn-danger" onclick="confirmSil()">Evet, Sil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CONFIG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let SUPABASE_URL = localStorage.getItem('sb_url') || '';
+let SUPABASE_KEY = localStorage.getItem('sb_key') || '';
+
+const AYLAR = ['','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+                'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const KAT_ICON = { elektrik:'⚡', dogalgaz:'🔥', su:'💧', internet:'🌐', kira:'🏠' };
+const KAT_LABEL = { elektrik:'Elektrik', dogalgaz:'Doğalgaz', su:'Su', internet:'İnternet', kira:'Kira' };
+
+let editId = null;
+let deleteId = null;
+let currentOrtakId = null;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SUPABASE FETCH HELPER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function sbFetch(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.message || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CONFIG SAVE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function saveConfig() {
+  const url = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfgKey').value.trim();
+  if (!url || !key) { toast('URL ve Key gerekli!', 'danger'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  SUPABASE_URL = url;
+  SUPABASE_KEY = key;
+  initApp();
+}
+
+function showSettings() {
+  document.getElementById('configPanel').style.display = 'block';
+  document.getElementById('cfgUrl').value = SUPABASE_URL;
+  document.getElementById('cfgKey').value = SUPABASE_KEY;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function initApp() {
+  try {
+    await sbFetch('/faturalar?limit=1');
+    document.getElementById('configPanel').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    // Mevcut ay varsayılan
+    const now = new Date();
+    // document.getElementById('filterAy').value = now.getMonth()+1;
+    document.getElementById('filterYil').value = now.getFullYear();
+    loadFaturalar();
+  } catch(e) {
+    toast('Bağlantı hatası: ' + e.message, 'danger');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    document.getElementById('cfgUrl').value = SUPABASE_URL;
+    document.getElementById('cfgKey').value = SUPABASE_KEY;
+    initApp();
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LOAD FATURALAR
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function loadFaturalar() {
+  document.getElementById('tableContainer').innerHTML =
+    '<div class="loading"><div class="spinner"></div> Yükleniyor...</div>';
+
+  const ay   = document.getElementById('filterAy').value;
+  const yil  = document.getElementById('filterYil').value;
+  const kat  = document.getElementById('filterKat').value;
+  const dur  = document.getElementById('filterDurum').value;
+
+  let q = '/faturalar?select=*,ortak_odemeler(*)&order=yil.desc,ay.desc,olusturma_tarihi.desc';
+  if (ay)  q += `&ay=eq.${ay}`;
+  if (yil) q += `&yil=eq.${yil}`;
+  if (kat) q += `&kategori=eq.${kat}`;
+
+  try {
+    let rows = await sbFetch(q);
+
+    // Durum filtresi (client-side)
+    if (dur === 'tam')     rows = rows.filter(r => r.ortak_odemeler?.[0]?.tam_alindi);
+    if (dur === 'bekliyor') rows = rows.filter(r => !r.ortak_odemeler?.[0]?.tam_alindi);
+
+    renderStats(rows);
+    renderTable(rows);
+    document.getElementById('rowCount').textContent = `${rows.length} kayıt`;
+  } catch(e) {
+    toast('Veri yüklenemedi: ' + e.message, 'danger');
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  STATS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderStats(rows) {
+  const toplam  = rows.reduce((s,r) => s + parseFloat(r.tutar), 0);
+  const ortakPay = rows.reduce((s,r) => s + parseFloat(r.tutar)/2, 0);
+  const alinan   = rows.reduce((s,r) => s + parseFloat(r.ortak_odemeler?.[0]?.alinan_tutar || 0), 0);
+  const kalan    = ortakPay - alinan;
+  const tamalanmis = rows.filter(r => r.ortak_odemeler?.[0]?.tam_alindi).length;
+
+  document.getElementById('statToplam').textContent   = fmt(toplam);
+  document.getElementById('statToplamSay').textContent = `${rows.length} fatura`;
+  document.getElementById('statOdendi').textContent   = fmt(toplam);
+  document.getElementById('statBekliyor').textContent = fmt(ortakPay);
+  document.getElementById('statKalan').textContent    = fmt(Math.max(0, kalan));
+  document.getElementById('statKalanSay').textContent =
+    `${tamalanmis}/${rows.length} tamamlandı`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  TABLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderTable(rows) {
+  if (!rows.length) {
+    document.getElementById('tableContainer').innerHTML =
+      `<div class="empty"><div class="icon">📭</div><p>Kayıt bulunamadı.<br>Filtrelerinizi değiştirin veya yeni fatura ekleyin.</p></div>`;
+    return;
+  }
+
+  const html = `
+  <table>
+    <thead>
+      <tr>
+        <th>Kategori</th>
+        <th>Dönem</th>
+        <th>Tutar</th>
+        <th>Ortak Payı</th>
+        <th>Alınan</th>
+        <th>Kalan</th>
+        <th>Tahsilat</th>
+        <th>İşlemler</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map(r => rowHTML(r)).join('')}
+    </tbody>
+  </table>`;
+  document.getElementById('tableContainer').innerHTML = html;
+}
+
+function rowHTML(r) {
+  const ortak     = r.ortak_odemeler?.[0];
+  const beklenen  = parseFloat(r.tutar) / 2;
+  const alinan    = ortak ? parseFloat(ortak.alinan_tutar) : 0;
+  const kalan     = Math.max(0, beklenen - alinan);
+  const pct       = beklenen > 0 ? Math.min(100, Math.round(alinan/beklenen*100)) : 0;
+  const tamAlindi = ortak?.tam_alindi;
+
+  return `<tr>
+    <td><span class="badge badge-${r.kategori}">${KAT_ICON[r.kategori]} ${KAT_LABEL[r.kategori]}</span></td>
+    <td>${AYLAR[r.ay]} ${r.yil}</td>
+    <td style="font-weight:600;">${fmt(r.tutar)}</td>
+    <td>${fmt(beklenen)}</td>
+    <td style="color:var(--success);">${fmt(alinan)}</td>
+    <td style="color:${kalan>0?'var(--warning)':'var(--success)'};">${fmt(kalan)}</td>
+    <td>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <span class="progress-text">%${pct}</span>
+        <span class="badge ${tamAlindi?'badge-durum-ok':'badge-durum-wait'}" style="padding:2px 7px;font-size:.65rem;">
+          ${tamAlindi ? '✓ Tamam' : '⏳ Bekliyor'}
+        </span>
+      </div>
+    </td>
+    <td>
+      <div class="action-btns">
+        <button class="btn btn-success btn-sm" onclick="openOdemeModal('${r.id}',${r.tutar})">💸</button>
+        <button class="btn btn-outline btn-sm" onclick="openEditModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">✎</button>
+        <button class="btn btn-danger btn-sm" onclick="openSilModal('${r.id}')">🗑</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  FATURA EKLE / DÜZENLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openAddModal() {
+  editId = null;
+  document.getElementById('faturaMoTitle').textContent = 'Yeni Fatura Ekle';
+  document.getElementById('fKat').value   = 'elektrik';
+  document.getElementById('fTutar').value = '';
+  const now = new Date();
+  document.getElementById('fAy').value    = now.getMonth()+1;
+  document.getElementById('fYil').value   = now.getFullYear();
+  document.getElementById('fAcik').value  = '';
+  document.getElementById('fOdendi').checked = true;
+  openModal('faturaMo');
+}
+
+function openEditModal(r) {
+  editId = r.id;
+  document.getElementById('faturaMoTitle').textContent = 'Fatura Düzenle';
+  document.getElementById('fKat').value   = r.kategori;
+  document.getElementById('fTutar').value = r.tutar;
+  document.getElementById('fAy').value    = r.ay;
+  document.getElementById('fYil').value   = r.yil;
+  document.getElementById('fAcik').value  = r.aciklama || '';
+  document.getElementById('fOdendi').checked = r.odendi;
+  openModal('faturaMo');
+}
+
+async function saveFatura() {
+  const data = {
+    kategori:  document.getElementById('fKat').value,
+    tutar:     parseFloat(document.getElementById('fTutar').value),
+    ay:        parseInt(document.getElementById('fAy').value),
+    yil:       parseInt(document.getElementById('fYil').value),
+    aciklama:  document.getElementById('fAcik').value.trim() || null,
+    odendi:    document.getElementById('fOdendi').checked
+  };
+  if (!data.tutar || isNaN(data.tutar) || data.tutar <= 0) {
+    toast('Geçerli bir tutar girin!', 'danger'); return;
+  }
+  try {
+    if (editId) {
+      await sbFetch(`/faturalar?id=eq.${editId}`, 'PATCH', data);
+      toast('Fatura güncellendi ✓', 'success');
+    } else {
+      const [fatura] = await sbFetch('/faturalar', 'POST', data);
+      // Otomatik ortak_odemeler kaydı oluştur
+      await sbFetch('/ortak_odemeler', 'POST', {
+        fatura_id: fatura.id,
+        beklenen_tutar: data.tutar / 2,
+        alinan_tutar: 0
+      });
+      toast('Fatura eklendi ✓', 'success');
+    }
+    closeModal('faturaMo');
+    loadFaturalar();
+  } catch(e) { toast('Hata: ' + e.message, 'danger'); }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ÖDEME MODAL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function openOdemeModal(faturaId, tutar) {
+  try {
+    // Ortak ödeme kaydını bul
+    const rows = await sbFetch(`/ortak_odemeler?fatura_id=eq.${faturaId}&select=*`);
+    let ortak = rows[0];
+    if (!ortak) {
+      // yoksa oluştur
+      const [yeni] = await sbFetch('/ortak_odemeler', 'POST', {
+        fatura_id: faturaId, beklenen_tutar: tutar/2, alinan_tutar: 0
+      });
+      ortak = yeni;
+    }
+    currentOrtakId = ortak.id;
+
+    const beklenen = parseFloat(ortak.beklenen_tutar);
+    const alinan   = parseFloat(ortak.alinan_tutar);
+    const kalan    = Math.max(0, beklenen - alinan);
+
+    document.getElementById('payInfo').innerHTML = `
+      <p>Ortak Payı</p><strong>${fmt(beklenen)}</strong>
+      <p style="margin-top:10px;">Alınan</p><strong style="color:var(--success)">${fmt(alinan)}</strong>
+      <p style="margin-top:10px;">Kalan</p><strong style="color:var(--warning)">${fmt(kalan)}</strong>
+    `;
+
+    // Geçmiş ödemeler
+    const gecmis = await sbFetch(`/kismi_odemeler?ortak_odeme_id=eq.${ortak.id}&order=odeme_tarihi.desc`);
+    let histHTML = '';
+    if (gecmis.length) {
+      histHTML = `<div class="payment-history"><h4>Önceki Ödemeler</h4>` +
+        gecmis.map(p => `
+          <div class="payment-item">
+            <span class="amt">+${fmt(p.miktar)}</span>
+            <span>${p.not_metni||''}</span>
+            <span class="dt">${new Date(p.odeme_tarihi).toLocaleDateString('tr-TR')}</span>
+          </div>`).join('') + '</div>';
+    }
+    document.getElementById('payHistory').innerHTML = histHTML;
+    document.getElementById('pMiktar').value = kalan > 0 ? kalan : '';
+    document.getElementById('pNot').value = '';
+    openModal('odemeMo');
+  } catch(e) { toast('Hata: ' + e.message, 'danger'); }
+}
+
+async function saveOdeme() {
+  const miktar = parseFloat(document.getElementById('pMiktar').value);
+  if (!miktar || miktar <= 0) { toast('Geçerli bir miktar girin!', 'danger'); return; }
+  const not = document.getElementById('pNot').value.trim() || null;
+  try {
+    await sbFetch('/kismi_odemeler', 'POST', {
+      ortak_odeme_id: currentOrtakId,
+      miktar, not_metni: not
+    });
+    toast('Ödeme kaydedildi ✓', 'success');
+    closeModal('odemeMo');
+    loadFaturalar();
+  } catch(e) { toast('Hata: ' + e.message, 'danger'); }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SİL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openSilModal(id) { deleteId = id; openModal('silMo'); }
+async function confirmSil() {
+  try {
+    await sbFetch(`/faturalar?id=eq.${deleteId}`, 'DELETE');
+    toast('Fatura silindi', 'success');
+    closeModal('silMo');
+    loadFaturalar();
+  } catch(e) { toast('Hata: ' + e.message, 'danger'); }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  HELPERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function fmt(n) {
+  return '₺' + parseFloat(n||0).toLocaleString('tr-TR', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function clearFilters() {
+  ['filterAy','filterKat','filterDurum'].forEach(id => document.getElementById(id).value='');
+  const now = new Date();
+  document.getElementById('filterYil').value = now.getFullYear();
+  loadFaturalar();
+}
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// Modal dışına tıkla kapat
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
